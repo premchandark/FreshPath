@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and progress tracking",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "completedRoles": { "type": "array", "items": { "type": "string" } },
+        "solvedTasks": { "type": "array", "items": { "type": "string" } },
+        "points": { "type": "integer" },
+        "purchasedCertifications": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["uid", "email"]
+    },
+    "UserNote": {
+      "title": "UserNote",
+      "description": "Notes taken by the user for a specific role",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "roleId": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "roleId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "UserNote",
+      "description": "User notes for specific roles"
+    }
+  }
+}

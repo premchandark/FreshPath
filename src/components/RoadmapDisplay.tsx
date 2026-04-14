@@ -12,7 +12,13 @@ import {
   Award,
   ArrowRight,
   Lightbulb,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  Layers,
+  CreditCard,
+  Lock,
+  Trophy,
+  Star
 } from 'lucide-react';
 import { RoleRoadmap, CourseModule } from '../services/gemini';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,14 +31,25 @@ import { Button } from '@/components/ui/button';
 import { CodePlayground } from './CodePlayground';
 import { NotePad } from './NotePad';
 import { Certificate } from './Certificate';
+import { PracticeLab } from './PracticeLab';
 
 interface RoadmapDisplayProps {
   roadmap: RoleRoadmap;
+  userPoints: number;
+  onTaskComplete: (taskId: string, points: number) => void;
+  isFirstCourse: boolean;
 }
 
-export function RoadmapDisplay({ roadmap }: RoadmapDisplayProps) {
+export function RoadmapDisplay({ roadmap, userPoints, onTaskComplete, isFirstCourse }: RoadmapDisplayProps) {
   const [isCertified, setIsCertified] = useState(false);
-  const [showCertificate, setShowCertificate] = useState(false);
+  const [isPaid, setIsPaid] = useState(isFirstCourse);
+  const [showPayment, setShowPayment] = useState(false);
+
+  const handlePayment = () => {
+    // Simulate payment
+    setIsPaid(true);
+    setShowPayment(false);
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8 relative">
@@ -43,30 +60,54 @@ export function RoadmapDisplay({ roadmap }: RoadmapDisplayProps) {
         animate={{ opacity: 1, x: 0 }}
         className="space-y-4"
       >
-        <Badge variant="outline" className="px-3 py-1 text-sm font-mono uppercase tracking-wider">
-          Learning Path
-        </Badge>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <Badge variant="outline" className="px-3 py-1 text-sm font-mono uppercase tracking-wider">
+            Learning Path
+          </Badge>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-bold">
+              <Trophy className="w-4 h-4" />
+              {userPoints} Points
+            </div>
+            {!isPaid && (
+              <Badge className="bg-rose-500 text-white animate-pulse">
+                Premium Certification
+              </Badge>
+            )}
+          </div>
+        </div>
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
           {roadmap.role}
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">
           {roadmap.overview}
         </p>
+
+        <Card className="bg-primary/5 border-primary/10">
+          <CardContent className="p-4 flex items-start gap-3">
+            <Globe className="w-5 h-5 text-primary mt-1 shrink-0" />
+            <div>
+              <h4 className="font-bold text-sm uppercase tracking-wider mb-1">Industry Knowledge</h4>
+              <p className="text-sm text-muted-foreground">{roadmap.industryKnowledge}</p>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       <Tabs defaultValue="basics" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-12">
-          <TabsTrigger value="basics">1. Basics</TabsTrigger>
-          <TabsTrigger value="advanced">2. Advanced</TabsTrigger>
-          <TabsTrigger value="playground">3. Practice</TabsTrigger>
-          <TabsTrigger value="project">4. Project</TabsTrigger>
-          <TabsTrigger value="certification">5. Certification</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto md:h-12 gap-1 bg-transparent">
+          <TabsTrigger value="basics" className="data-[state=active]:bg-primary data-[state=active]:text-white">1. Basics</TabsTrigger>
+          <TabsTrigger value="advanced" className="data-[state=active]:bg-primary data-[state=active]:text-white">2. Advanced</TabsTrigger>
+          <TabsTrigger value="tools" className="data-[state=active]:bg-primary data-[state=active]:text-white">3. Tools</TabsTrigger>
+          <TabsTrigger value="lab" className="data-[state=active]:bg-primary data-[state=active]:text-white">4. Lab</TabsTrigger>
+          <TabsTrigger value="project" className="data-[state=active]:bg-primary data-[state=active]:text-white">5. Project</TabsTrigger>
+          <TabsTrigger value="certification" className="data-[state=active]:bg-primary data-[state=active]:text-white">6. Certificate</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basics" className="mt-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {roadmap.basics.map((module, idx) => (
-              <ModuleCard key={idx} module={module} index={idx} />
+              <ModuleCard key={`basic-${idx}`} module={module} index={idx} />
             ))}
           </div>
         </TabsContent>
@@ -74,13 +115,49 @@ export function RoadmapDisplay({ roadmap }: RoadmapDisplayProps) {
         <TabsContent value="advanced" className="mt-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {roadmap.advanced.map((module, idx) => (
-              <ModuleCard key={idx} module={module} index={idx} />
+              <ModuleCard key={`advanced-${idx}`} module={module} index={idx} />
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="playground" className="mt-6">
-          <CodePlayground />
+        <TabsContent value="tools" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            {roadmap.toolStacks.map((stack, idx) => (
+              <Card key={idx}>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-primary" />
+                    {stack.category}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stack.options.map((opt, i) => (
+                    <div key={i} className="p-4 rounded-xl border bg-muted/30 space-y-2">
+                      <h5 className="font-bold text-primary">{opt.name}</h5>
+                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                      <div className="pt-2 border-t border-muted">
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Why Choose?</span>
+                        <p className="text-[10px] italic">{opt.whyChoose}</p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="lab" className="mt-6">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold flex items-center gap-2">
+                <Terminal className="w-6 h-6 text-primary" />
+                Practice Lab
+              </h3>
+              <Badge variant="outline">50+ Tasks Available</Badge>
+            </div>
+            <PracticeLab tasks={roadmap.practiceTasks} onComplete={onTaskComplete} />
+          </div>
         </TabsContent>
 
         <TabsContent value="project" className="mt-6">
@@ -145,15 +222,6 @@ export function RoadmapDisplay({ roadmap }: RoadmapDisplayProps) {
                         ))}
                       </CardContent>
                     </Card>
-
-                    <div className="bg-primary/5 rounded-xl p-6 border border-primary/10 space-y-4">
-                      <Lightbulb className="w-8 h-8 text-primary" />
-                      <h3 className="font-bold">Pro Tip</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Don't just copy the code. Try to understand why each line is there. 
-                        Use the Playground tab to test small parts of the code!
-                      </p>
-                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -219,9 +287,61 @@ export function RoadmapDisplay({ roadmap }: RoadmapDisplayProps) {
                     to unlock your certificate for {roadmap.role}.
                   </p>
                 </div>
-                <Button variant="outline" onClick={() => document.querySelector('[value="project"]')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))}>
-                  Go to Project
-                </Button>
+              </motion.div>
+            ) : !isPaid ? (
+              <motion.div
+                key="payment"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-md mx-auto"
+              >
+                <Card className="border-2 border-primary">
+                  <CardHeader className="text-center">
+                    <div className="flex justify-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                        <CreditCard className="w-8 h-8 text-primary" />
+                      </div>
+                    </div>
+                    <CardTitle className="text-2xl">Unlock Certification</CardTitle>
+                    <CardDescription>
+                      You've done the hard work! Now get the recognition you deserve.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="bg-muted p-4 rounded-xl space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Professional Certificate</span>
+                        <span className="font-bold">₹499</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-muted-foreground">
+                        <span>Role: {roadmap.role}</span>
+                        <span>One-time payment</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        Verified Digital Certificate
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        Add to LinkedIn Profile
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        Lifetime Access to Course Updates
+                      </div>
+                    </div>
+
+                    <Button className="w-full h-12 text-lg" onClick={handlePayment}>
+                      Pay ₹499 & Download
+                    </Button>
+                    <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
+                      <Lock className="w-3 h-3" /> Secure payment powered by Stripe
+                    </p>
+                  </CardContent>
+                </Card>
               </motion.div>
             ) : (
               <motion.div

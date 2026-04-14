@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Compass, 
@@ -7,18 +7,55 @@ import {
   GraduationCap,
   Github,
   Twitter,
-  Linkedin
+  Linkedin,
+  LogOut,
+  Trophy,
+  LogIn,
+  Search,
+  ChevronRight,
+  Mail
 } from 'lucide-react';
 import { RoleSelector } from './components/RoleSelector';
 import { RoadmapDisplay } from './components/RoadmapDisplay';
 import { generateRoadmap, RoleRoadmap } from './services/gemini';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { auth, signInWithGoogle, logout, db } from './lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 export default function App() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [roadmap, setRoadmap] = useState<RoleRoadmap | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserProfile(userSnap.data());
+        }
+      } else {
+        setUserProfile(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleRoleSelect = async (role: string) => {
     setSelectedRole(role);
@@ -33,10 +70,25 @@ export default function App() {
     }
   };
 
+  const handleTaskComplete = async (taskId: string, points: number) => {
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        solvedTasks: arrayUnion(taskId),
+        points: increment(points)
+      });
+      // Refresh local profile
+      const userSnap = await getDoc(userRef);
+      setUserProfile(userSnap.data());
+    }
+  };
+
   const reset = () => {
     setSelectedRole(null);
     setRoadmap(null);
   };
+
+  const isFirstCourse = userProfile?.completedRoles?.length === 0 || !userProfile;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
@@ -51,18 +103,42 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
-            {selectedRole && (
-              <Button variant="ghost" size="sm" onClick={reset} className="hidden sm:flex">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Change Role
+            {user ? (
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-2 bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">
+                  <Trophy className="w-3 h-3" />
+                  {userProfile?.points || 0} pts
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10 border-2 border-primary/10">
+                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
+                        <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => logout()}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <Button onClick={() => signInWithGoogle()} className="gap-2">
+                <LogIn className="w-4 h-4" />
+                Sign In
               </Button>
             )}
-            <Button variant="outline" size="sm" className="hidden sm:flex">
-              Sign In
-            </Button>
-            <Button size="sm">
-              Get Started
-            </Button>
           </div>
         </div>
       </nav>
@@ -85,17 +161,17 @@ export default function App() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4"
                 >
                   <Sparkles className="w-4 h-4" />
-                  AI-Powered Career Guidance
+                  The Rat Race Ends Here
                 </motion.div>
                 
                 <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase">
-                  Your Future <br />
-                  <span className="text-primary">Starts Here.</span>
+                  Your First Step to a <br />
+                  <span className="text-primary">Better Career.</span>
                 </h1>
                 
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  Choosing a career path is hard. We make it easy. Pick a role, get a personalized 
-                  learning roadmap, and build your first project today.
+                  Struggling to choose? We align your interests with industry-ready paths. 
+                  Learn, practice, and get certified with real-world projects.
                 </p>
 
                 <div className="pt-12">
@@ -147,7 +223,12 @@ export default function App() {
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Roles
                 </Button>
-                <RoadmapDisplay roadmap={roadmap} />
+                <RoadmapDisplay 
+                  roadmap={roadmap} 
+                  userPoints={userProfile?.points || 0}
+                  onTaskComplete={handleTaskComplete}
+                  isFirstCourse={isFirstCourse}
+                />
               </div>
             </motion.div>
           ) : null}
